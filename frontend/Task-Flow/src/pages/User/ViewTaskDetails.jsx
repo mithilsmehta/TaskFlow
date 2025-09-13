@@ -10,15 +10,14 @@ import { LuSquareArrowOutUpRight } from "react-icons/lu";
 const ViewTaskDetails = () => {
     const { id } = useParams();
     const [task, setTask] = useState(null);
+    const [loading, setLoading] = useState(false);
 
     const getStatusTagColor = (status) => {
         switch (status) {
             case "In Progress":
                 return "text-cyan-500 bg-cyan-50 border border-cyan-500/10";
-
             case "Completed":
                 return "text-lime-500 bg-lime-50 border border-lime-500/20";
-
             default:
                 return "text-violet-500 bg-violet-50 border border-violet-500/10";
         }
@@ -27,58 +26,60 @@ const ViewTaskDetails = () => {
     // get Task info by ID
     const getTaskDetailsByID = async () => {
         try {
-            const response = await axiosInstance.get(
-                API_PATHS.TASKS.GET_TASK_BY_ID(id)
-            );
-
-            if (response.data) {
-                const taskInfo = response.data;
-                setTask(taskInfo);
-            }
+            const response = await axiosInstance.get(API_PATHS.TASKS.GET_TASK_BY_ID(id));
+            if (response.data) setTask(response.data);
         } catch (error) {
-            console.error("Error fetching users:", error);
+            console.error("Error fetching task details:", error);
         }
     };
 
     // handle todo check
     const updateTodoChecklist = async (index) => {
-        const todoChecklist = [...task?.todoChecklist];
-        const taskId = id;
+        if (!task) return;
+        const updatedChecklist = [...task.todoChecklist];
+        updatedChecklist[index].completed = !updatedChecklist[index].completed;
 
-        if (todoChecklist && todoChecklist[index]) {
-            todoChecklist[index].completed = !todoChecklist[index].completed;
-
-            try {
-                const response = await axiosInstance.put(
-                    API_PATHS.TASKS.UPDATE_TODO_CHECKLIST(taskId),
-                    { todoChecklist }
-                );
-                if (response.status === 200) {
-                    setTask(response.data?.task || task);
-                } else {
-                    // Optionally revert the toggle if the API call fails.
-                    todoChecklist[index].completed = !todoChecklist[index].completed;
-                }
-            } catch (error) {
-                todoChecklist[index].completed = !todoChecklist[index].completed;
+        try {
+            const response = await axiosInstance.put(
+                API_PATHS.TASKS.UPDATE_TODO_CHECKLIST(id),
+                { todoChecklist: updatedChecklist }
+            );
+            if (response.status === 200) {
+                setTask(response.data?.task || task);
             }
+        } catch (error) {
+            console.error("Failed to update checklist:", error);
         }
     };
 
-    // Handle attachment link lick
-    const handleLinkClick = (link) => {
-        if (!/^https?:\/\//i.test(link)) {
-            link = "https://" + link; // Default to HTTPS
+    // update task status (Pending → In Progress → Completed)
+    const updateTaskStatus = async (newStatus) => {
+        try {
+            setLoading(true);
+            const response = await axiosInstance.put(
+                API_PATHS.TASKS.UPDATE_STATUS(id),
+                { status: newStatus }
+            );
+            if (response.status === 200) {
+                setTask(response.data);
+            }
+        } catch (error) {
+            console.error("Failed to update status:", error);
+        } finally {
+            setLoading(false);
         }
+    };
+
+    // Handle attachment link click
+    const handleLinkClick = (link) => {
+        if (!/^https?:\/\//i.test(link)) link = "https://" + link; // Default to HTTPS
         window.open(link, "_blank");
     };
 
     useEffect(() => {
-        if (id) {
-            getTaskDetailsByID();
-        }
-        return () => { };
+        if (id) getTaskDetailsByID();
     }, [id]);
+
     return (
         <DashboardLayout activeMenu="My Tasks">
             <div className="mt-5">
@@ -121,22 +122,41 @@ const ViewTaskDetails = () => {
                                     <label className="text-xs font-medium text-slate-500">
                                         Assigned To
                                     </label>
-
                                     <AvatarGroup
                                         avatars={
-                                            task?.assignedTo?.map((item) => item?.profileImageUrl) ||
-                                            []
+                                            task?.assignedTo?.map((item) => item?.profileImageUrl) || []
                                         }
                                         maxVisible={5}
                                     />
                                 </div>
                             </div>
 
-                            <div className="mt-2">
+                            {/* Status update buttons */}
+                            <div className="mt-4 flex gap-3">
+                                {task.status !== "In Progress" && (
+                                    <button
+                                        className="px-4 py-2 text-sm bg-cyan-500 text-white rounded"
+                                        disabled={loading}
+                                        onClick={() => updateTaskStatus("In Progress")}
+                                    >
+                                        Mark In Progress
+                                    </button>
+                                )}
+                                {task.status !== "Completed" && (
+                                    <button
+                                        className="px-4 py-2 text-sm bg-lime-500 text-white rounded"
+                                        disabled={loading}
+                                        onClick={() => updateTaskStatus("Completed")}
+                                    >
+                                        Mark Completed
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="mt-4">
                                 <label className="text-xs font-medium text-slate-500">
                                     Todo Checklist
                                 </label>
-
                                 {task?.todoChecklist?.map((item, index) => (
                                     <TodoCheckList
                                         key={`todo_${index}`}
@@ -152,7 +172,6 @@ const ViewTaskDetails = () => {
                                     <label className="text-xs font-medium text-slate-500">
                                         Attachments
                                     </label>
-
                                     {task?.attachments?.map((link, index) => (
                                         <Attachment
                                             key={`link_${index}`}
@@ -173,48 +192,38 @@ const ViewTaskDetails = () => {
 
 export default ViewTaskDetails;
 
-const InfoBox = ({ label, value }) => {
-    return (
-        <>
-            <label className="text-xs font-medium text-slate-500">{label}</label>
+const InfoBox = ({ label, value }) => (
+    <>
+        <label className="text-xs font-medium text-slate-500">{label}</label>
+        <p className="text-[12px] md:text-[13px] font-medium text-gray-700 mt-0.5">
+            {value}
+        </p>
+    </>
+);
 
-            <p className="text-[12px] md:text-[13px] font-medium text-gray-700 mt-0.5">
-                {value}
-            </p>
-        </>
-    );
-};
+const TodoCheckList = ({ text, isChecked, onChange }) => (
+    <div className="flex items-center gap-3 p-3">
+        <input
+            type="checkbox"
+            checked={isChecked}
+            onChange={onChange}
+            className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded-sm outline-none cursor-pointer"
+        />
+        <p className="text-[13px] text-gray-800">{text}</p>
+    </div>
+);
 
-const TodoCheckList = ({ text, isChecked, onChange }) => {
-    return (
-        <div className="flex items-center gap-3 p-3">
-            <input
-                type="checkbox"
-                checked={isChecked}
-                onChange={onChange}
-                className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded-sm outline-none cursor-pointer"
-            />
-
-            <p className="text-[13px] text-gray-800">{text}</p>
+const Attachment = ({ link, index, onClick }) => (
+    <div
+        className="flex justify-between bg-gray-50 border border-gray-100 px-3 py-2 rounded-md mb-3 mt-2 cursor-pointer"
+        onClick={onClick}
+    >
+        <div className="flex-1 flex items-center gap-3">
+            <span className="text-xs text-gray-400 font-semibold mr-2">
+                {index < 9 ? `0${index + 1}` : index + 1}
+            </span>
+            <p className="text-xs text-black">{link}</p>
         </div>
-    );
-};
-
-const Attachment = ({ link, index, onClick }) => {
-    return (
-        <div
-            className="flex justify-between bg-gray-50 border border-gray-100 px-3 py-2 rounded-md mb-3 mt-2 cursor-pointer"
-            onClick={onClick}
-        >
-            <div className="flex-1 flex items-center gap-3">
-                <span className="text-xs text-gray-400 font-semibold mr-2">
-                    {index < 9 ? `0${index + 1}` : index + 1}
-                </span>
-
-                <p className="text-xs text-black">{link}</p>
-            </div>
-
-            <LuSquareArrowOutUpRight className="text-gray-400" />
-        </div>
-    );
-};
+        <LuSquareArrowOutUpRight className="text-gray-400" />
+    </div>
+);

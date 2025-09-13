@@ -5,17 +5,16 @@ import Input from "../../components/Inputs/Input";
 import { validateEmail } from "../../utils/helper";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPaths";
-import { UserContext } from "../../context/userContext";
+import { UserContext } from "../../context/UserContext";
 
 const Login = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState(null);
 
-    const { updateUser } = useContext(UserContext)
+    const { updateUser } = useContext(UserContext);
     const navigate = useNavigate();
 
-    // Handle Login Form Submit
     const handleLogin = async (e) => {
         e.preventDefault();
 
@@ -23,32 +22,33 @@ const Login = () => {
             setError("Please enter a valid email address.");
             return;
         }
-
         if (!password) {
             setError("Please enter the password");
             return;
         }
 
-        setError("");
+        setError(null);
 
-        //Login API Call
         try {
             const response = await axiosInstance.post(API_PATHS.AUTH.LOGIN, {
                 email,
                 password,
             });
 
-            const { token, role } = response.data;
+            // backend returns { token, user: {...} }
+            const { token, user } = response.data;
 
-            if (token) {
+            if (token && user) {
                 localStorage.setItem("token", token);
-                updateUser(response.data)
+                localStorage.setItem("role", user.role);
 
-                //Redirect based on role
-                if (role === "admin") {
-                    navigate("/admin/dashboard");
+                updateUser({ token, user });
+
+                // redirect based on role
+                if (user.role === "admin") {
+                    navigate("/admin/dashboard", { replace: true });
                 } else {
-                    navigate("/user/dashboard");
+                    navigate("/user/dashboard", { replace: true });
                 }
             }
         } catch (error) {
@@ -74,7 +74,7 @@ const Login = () => {
                         onChange={({ target }) => setEmail(target.value)}
                         label="Email Address"
                         placeholder="john@example.com"
-                        type="text"
+                        type="email"
                     />
 
                     <Input
@@ -94,7 +94,7 @@ const Login = () => {
                     <p className="text-[13px] text-slate-800 mt-3">
                         Don’t have an account?{" "}
                         <Link className="font-medium text-primary underline" to="/signup">
-                            SignUp
+                            Sign Up
                         </Link>
                     </p>
                 </form>
