@@ -131,28 +131,6 @@ const ViewTaskDetails = () => {
                                 </div>
                             </div>
 
-                            {/* Status update buttons */}
-                            <div className="mt-4 flex gap-3">
-                                {task.status !== "In Progress" && (
-                                    <button
-                                        className="px-4 py-2 text-sm bg-cyan-500 text-white rounded"
-                                        disabled={loading}
-                                        onClick={() => updateTaskStatus("In Progress")}
-                                    >
-                                        Mark In Progress
-                                    </button>
-                                )}
-                                {task.status !== "Completed" && (
-                                    <button
-                                        className="px-4 py-2 text-sm bg-lime-500 text-white rounded"
-                                        disabled={loading}
-                                        onClick={() => updateTaskStatus("Completed")}
-                                    >
-                                        Mark Completed
-                                    </button>
-                                )}
-                            </div>
-
                             <div className="mt-4">
                                 <label className="text-xs font-medium text-slate-500">
                                     Todo Checklist
