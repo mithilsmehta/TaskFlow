@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Dashboard from "./pages/Admin/Dashboard";
 import ManageTasks from "./pages/Admin/ManageTasks";
 import CreateTask from "./pages/Admin/CreateTask";
+import UpdateTask from "./pages/Admin/UpdateTask";
 import ManageUsers from "./pages/Admin/ManageUsers";
 import UserProfile from "./pages/Admin/UserProfile";
 
@@ -33,6 +34,7 @@ const App = () => {
             <Route path="/admin/dashboard" element={<Dashboard />} />
             <Route path="/admin/tasks" element={<ManageTasks />} />
             <Route path="/admin/create-task" element={<CreateTask />} />
+            <Route path="/admin/update-task/:taskId" element={<UpdateTask />} />
             <Route path="/admin/users" element={<ManageUsers />} />
             <Route path="/admin/users/:id" element={<UserProfile />} />
           </Route>

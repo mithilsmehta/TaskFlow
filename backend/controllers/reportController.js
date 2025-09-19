@@ -36,7 +36,9 @@ const exportTasksReport = async (req, res) => {
 
         res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         res.setHeader("Content-Disposition", 'attachment; filename="tasks_report.xlsx"');
-        return workbook.xlsx.write(res).then(() => res.end());
+        res.status(200);
+        await workbook.xlsx.write(res);
+        return res.end();
     } catch (error) {
         res.status(500).json({ message: "Error exporting tasks", error: error.message });
     }
@@ -70,7 +72,9 @@ const exportUsersReport = async (req, res) => {
 
         res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         res.setHeader("Content-Disposition", 'attachment; filename="users_report.xlsx"');
-        return workbook.xlsx.write(res).then(() => res.end());
+        res.status(200);
+        await workbook.xlsx.write(res);
+        return res.end();
     } catch (error) {
         res.status(500).json({ message: "Error exporting users", error: error.message });
     }

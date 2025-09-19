@@ -7,21 +7,23 @@ const TodoListInput = ({ todoList, setTodoList }) => {
     // Function to handle adding an option
     const handleAddOption = () => {
         if (option.trim()) {
-            setTodoList([...todoList, option.trim()]);
+            const base = Array.isArray(todoList) ? todoList : [];
+            setTodoList([...base, option.trim()]);
             setOption("");
         }
     };
 
     // Function to handle deleting an option
     const handleDeleteOption = (index) => {
-        const updatedArr = todoList.filter((_, idx) => idx !== index);
+        const base = Array.isArray(todoList) ? todoList : [];
+        const updatedArr = base.filter((_, idx) => idx !== index);
         setTodoList(updatedArr);
     };
     return (
         <div>
-            {todoList.map((item, index) => (
+            {(Array.isArray(todoList) ? todoList : []).map((item, index) => (
                 <div
-                    key={item}
+                    key={`${item}-${index}`}
                     className="flex justify-between bg-gray-50 border border-gray-100 px-3 py-2 rounded-md mb-3 mt-2"
                 >
                     <p className="text-xs text-black">
@@ -32,6 +34,7 @@ const TodoListInput = ({ todoList, setTodoList }) => {
                     </p>
 
                     <button
+                        type="button"
                         className="cursor-pointer"
                         onClick={() => {
                             handleDeleteOption(index);
@@ -51,7 +54,7 @@ const TodoListInput = ({ todoList, setTodoList }) => {
                     className="w-full text-[13px] text-black outline-none bg-white border border-gray-100 px-3 py-2 rounded-md"
                 />
 
-                <button className="card-btn text-nowrap" onClick={handleAddOption}>
+                <button type="button" className="card-btn text-nowrap" onClick={handleAddOption}>
                     <HiMiniPlus className="text-lg" /> Add
                 </button>
             </div>

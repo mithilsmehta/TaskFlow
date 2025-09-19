@@ -12,6 +12,7 @@ const SelectDropdown = ({ options, value, onChange, placeholder }) => {
     return <div className="relative w-full">
         {/* Dropdown Button */}
         <button
+            type="button"
             onClick={() => setIsOpen(!isOpen)}
             className="w-full text-sm text-black outline-none bg-white border border-slate-100 px-2.5 py-3 rounded-md mt-2 flex justify-between items-center"
         >

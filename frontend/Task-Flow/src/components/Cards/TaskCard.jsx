@@ -5,19 +5,32 @@ import { LuPaperclip } from "react-icons/lu";
 import moment from "moment";
 
 const TaskCard = ({
-    title,
-    description,
-    priority,
-    status,
-    progress,
-    createdAt,
+    title = 'No Title',
+    description = 'No description available',
+    priority = 'Medium',
+    status = 'Pending',
+    progress: propProgress = 0,
+    createdAt = new Date(),
     dueDate,
-    assignedTo,
-    attachmentCount,
-    completedTodoCount,
-    todoChecklist,
+    assignedTo = [],
+    attachmentCount = 0,
+    completedTodoCount = 0,
+    todoChecklist = [],
     onClick,
 }) => {
+    // Calculate progress based on todoChecklist if available, otherwise use propProgress or calculate from completedTodoCount
+    const progress = todoChecklist.length > 0 
+        ? Math.round((todoChecklist.filter(todo => todo.done).length / todoChecklist.length) * 100)
+        : propProgress || (completedTodoCount > 0 ? Math.round((completedTodoCount / (completedTodoCount + (todoChecklist?.length || 1))) * 100) : 0);
+
+    // Format dates
+    const formattedCreatedAt = moment(createdAt).isValid() 
+        ? moment(createdAt).format('Do MMM YYYY')
+        : 'N/A';
+        
+    const formattedDueDate = dueDate && moment(dueDate).isValid()
+        ? moment(dueDate).format('Do MMM YYYY')
+        : 'No due date';
     const getStatusTagColor = () => {
         switch (status) {
             case "In Progress":
@@ -63,10 +76,10 @@ const TaskCard = ({
 
         <div
             className={`px-4 border-l-[3px] ${status === "In Progress"
-                    ? "border-cyan-500"
-                    : status === "Completed"
-                        ? "border-indigo-500"
-                        : "border-violet-500"
+                ? "border-cyan-500"
+                : status === "Completed"
+                    ? "border-indigo-500"
+                    : "border-violet-500"
                 }`}
         >
             <p className="text-sm font-medium text-gray-800 mt-4 line-clamp-2">
@@ -77,29 +90,41 @@ const TaskCard = ({
                 {description}
             </p>
 
-            <p className="text-[13px] text-gray-700/80 font-medium mt-2 mb-2 leading-[18px]">
-                Task Done:{" "}
-                <span className="font-semibold text-gray-700">
-                    {completedTodoCount} / {todoChecklist.length || 0}
-                </span>
-            </p>
+            <div className="flex items-center justify-between mt-2 mb-2">
+                <p className="text-[13px] text-gray-700/80 font-medium leading-[18px]">
+                    Task Done:{" "}
+                    <span className="font-semibold text-gray-700">
+                        {todoChecklist.length > 0 
+                            ? `${todoChecklist.filter(todo => todo.done).length} / ${todoChecklist.length}`
+                            : completedTodoCount > 0 
+                                ? `${completedTodoCount} tasks completed`
+                                : 'No tasks'}
+                    </span>
+                </p>
+                {attachmentCount > 0 && (
+                    <div className="flex items-center text-xs text-gray-500">
+                        <LuPaperclip className="mr-1" size={14} />
+                        {attachmentCount}
+                    </div>
+                )}
+            </div>
 
             <Progress progress={progress} status={status} />
         </div>
 
-        <div className="px-4">
-            <div className="flex items-center justify-between my-1">
+        <div className="px-4 mt-3">
+            <div className="flex items-center justify-between border-t border-gray-100 pt-3">
                 <div>
                     <label className="text-xs text-gray-500">Start Date</label>
                     <p className="text-[13px] font-medium text-gray-900">
-                        {moment(createdAt).format("Do MMM YYYY")}
+                        {formattedCreatedAt}
                     </p>
                 </div>
 
-                <div>
+                <div className="text-right">
                     <label className="text-xs text-gray-500">Due Date</label>
-                    <p className="text-[13px] font-medium text-gray-900">
-                        {moment(dueDate).format("Do MMM YYYY")}
+                    <p className={`text-[13px] font-medium ${dueDate && moment(dueDate).isBefore(moment(), 'day') ? 'text-red-500' : 'text-gray-900'}`}>
+                        {formattedDueDate}
                     </p>
                 </div>
             </div>

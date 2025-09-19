@@ -17,25 +17,30 @@ const ManageTasks = () => {
 
     const getAllTasks = async () => {
         try {
-            const response = await axiosInstance.get(API_PATHS.TASKS.GET_ALL_TASKS, {
-                params: {
-                    status: filterStatus === "All" ? "" : filterStatus,
-                },
-            });
+            // First, get all tasks without filtering
+            const response = await axiosInstance.get(API_PATHS.TASKS.GET_ALL_TASKS);
+            
+            if (!response.data || !Array.isArray(response.data.tasks)) {
+                console.error("Invalid response format:", response.data);
+                toast.error("Failed to load tasks: Invalid response format");
+                return;
+            }
 
-            console.log("API Response (tasks):", response.data);
+            const allTasks = response.data.tasks;
+            
+            // Filter tasks based on the selected status
+            const filteredTasks = filterStatus === "All" 
+                ? allTasks 
+                : allTasks.filter(task => task.status === filterStatus);
 
-            // ✅ Backend returns an array, not { tasks: [...] }
-            const tasks = Array.isArray(response.data.tasks) ? response.data.tasks : [];
+            setAllTasks(filteredTasks);
 
-            setAllTasks(tasks);
-
-            // ✅ Build summary on frontend since backend doesn’t send it
+            // Calculate counts from all tasks, not just the filtered ones
             const statusSummary = {
-                all: tasks.length,
-                pendingTasks: tasks.filter(t => t.status === "Pending").length,
-                inProgressTasks: tasks.filter(t => t.status === "In Progress").length,
-                completedTasks: tasks.filter(t => t.status === "Completed").length,
+                all: allTasks.length,
+                pendingTasks: allTasks.filter(t => t.status === "Pending").length,
+                inProgressTasks: allTasks.filter(t => t.status === "In Progress").length,
+                completedTasks: allTasks.filter(t => t.status === "Completed").length,
             };
 
             const statusArray = [
@@ -53,7 +58,10 @@ const ManageTasks = () => {
     };
 
     const handleClick = (taskData) => {
-        navigate(`/admin/create-task`, { state: { taskId: taskData._id } });
+        // Navigate to update task page with return URL
+        navigate(`/admin/update-task/${taskData._id}`, { 
+            state: { from: '/admin/tasks' } 
+        });
     };
 
     // download task report
@@ -61,19 +69,39 @@ const ManageTasks = () => {
         try {
             const response = await axiosInstance.get(API_PATHS.REPORTS.EXPORT_TASKS, {
                 responseType: "blob",
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                },
             });
+
+            // Check if we got a valid response
+            if (!response.data) {
+                throw new Error('No data received from server');
+            }
+
+            const contentDisposition = response.headers['content-disposition'];
+            const filename = contentDisposition
+                ? contentDisposition.split('filename=')[1].replace(/"/g, '')
+                : `task_report_${new Date().toISOString().split('T')[0]}.xlsx`;
 
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement("a");
             link.href = url;
-            link.setAttribute("download", "task_details.xlsx");
+            link.setAttribute("download", filename);
             document.body.appendChild(link);
             link.click();
-            link.parentNode.removeChild(link);
-            window.URL.revokeObjectURL(url);
+            
+            // Cleanup
+            setTimeout(() => {
+                link.parentNode.removeChild(link);
+                window.URL.revokeObjectURL(url);
+            }, 100);
+            
+            toast.success("Report downloaded successfully!");
         } catch (error) {
-            console.error("Error downloading details:", error);
-            toast.error("Failed to download details. Please try again.");
+            console.error("Error downloading report:", error);
+            toast.error(error.response?.data?.message || "Failed to download report. Please try again.");
         }
     };
 
@@ -118,17 +146,21 @@ const ManageTasks = () => {
                         allTasks.map((item) => (
                             <TaskCard
                                 key={item._id}
-                                title={item.title}
-                                description={item.description}
-                                priority={item.priority}
-                                status={item.status}
-                                progress={item.progress}
-                                createdAt={item.createdAt}
+                                title={item.title || 'Untitled Task'}
+                                description={item.description || 'No description available'}
+                                priority={item.priority || 'Medium'}
+                                status={item.status || 'Pending'}
+                                progress={item.progress || 0}
+                                createdAt={item.createdAt || new Date()}
                                 dueDate={item.dueDate}
-                                assignedTo={item.assignedTo?.map((a) => a.profileImageUrl)}
-                                attachmentCount={item.attachments?.length || 0}
-                                completedTodoCount={item.completedTodoCount || 0}
-                                todoChecklist={item.todoChecklist || []}
+                                assignedTo={Array.isArray(item.assignedTo) 
+                                    ? item.assignedTo.map(a => a.profileImageUrl).filter(Boolean)
+                                    : []}
+                                attachmentCount={Array.isArray(item.attachments) ? item.attachments.length : 0}
+                                completedTodoCount={Array.isArray(item.todoChecklist) 
+                                    ? item.todoChecklist.filter(todo => todo.done).length 
+                                    : 0}
+                                todoChecklist={Array.isArray(item.todoChecklist) ? item.todoChecklist : []}
                                 onClick={() => handleClick(item)}
                             />
                         ))

@@ -58,14 +58,14 @@ const CreateTask = () => {
         setLoading(true);
 
         try {
-            const todolist = taskData.todoChecklist?.map((item) => ({
+            const todolist = (taskData.todoChecklist || []).map((item) => ({
                 text: item,
-                completed: false,
+                done: false,
             }));
 
             const response = await axiosInstance.post(API_PATHS.TASKS.CREATE_TASK, {
                 ...taskData,
-                dueDate: new Date(taskData.dueDate).toISOString(),
+                dueDate: taskData.dueDate ? new Date(taskData.dueDate).toISOString() : null,
                 todoChecklist: todolist,
             });
 
@@ -85,13 +85,13 @@ const CreateTask = () => {
         setLoading(true);
 
         try {
-            const todolist = taskData.todoChecklist?.map((item) => {
+            const todolist = (taskData.todoChecklist || []).map((item) => {
                 const prevTodoChecklist = currentTask?.todoChecklist || [];
                 const matchedTask = prevTodoChecklist.find((task) => task.text == item);
 
                 return {
                     text: item,
-                    completed: matchedTask ? matchedTask.completed : false,
+                    done: matchedTask ? !!matchedTask.done : false,
                 };
             });
 
@@ -99,7 +99,7 @@ const CreateTask = () => {
                 API_PATHS.TASKS.UPDATE_TASK(taskId),
                 {
                     ...taskData,
-                    dueDate: new Date(taskData.dueDate).toISOString(),
+                    dueDate: taskData.dueDate ? new Date(taskData.dueDate).toISOString() : null,
                     todoChecklist: todolist,
                 }
             );

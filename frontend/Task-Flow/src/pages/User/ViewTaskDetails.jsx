@@ -35,20 +35,27 @@ const ViewTaskDetails = () => {
 
     // handle todo check
     const updateTodoChecklist = async (index) => {
-        if (!task) return;
-        const updatedChecklist = [...task.todoChecklist];
-        updatedChecklist[index].completed = !updatedChecklist[index].completed;
+        if (!task || !task.todoChecklist?.[index]) return;
+        
+        // Create a new array to avoid direct state mutation
+        const updatedChecklist = task.todoChecklist.map((item, i) => 
+            i === index ? { ...item, done: !item.done } : item
+        );
 
         try {
             const response = await axiosInstance.put(
                 API_PATHS.TASKS.UPDATE_TODO_CHECKLIST(id),
                 { todoChecklist: updatedChecklist }
             );
-            if (response.status === 200) {
-                setTask(response.data?.task || task);
+            
+            if (response.data?.task) {
+                setTask(response.data.task);
             }
         } catch (error) {
             console.error("Failed to update checklist:", error);
+            // Revert on error
+            const revertedChecklist = [...task.todoChecklist];
+            setTask({...task, todoChecklist: revertedChecklist});
         }
     };
 
@@ -139,7 +146,7 @@ const ViewTaskDetails = () => {
                                     <TodoCheckList
                                         key={`todo_${index}`}
                                         text={item.text}
-                                        isChecked={item?.completed}
+                                        done={item.done}
                                         onChange={() => updateTodoChecklist(index)}
                                     />
                                 ))}
@@ -179,15 +186,17 @@ const InfoBox = ({ label, value }) => (
     </>
 );
 
-const TodoCheckList = ({ text, isChecked, onChange }) => (
-    <div className="flex items-center gap-3 p-3">
+const TodoCheckList = ({ text, done, onChange }) => (
+    <div className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-md">
         <input
             type="checkbox"
-            checked={isChecked}
+            checked={done}
             onChange={onChange}
-            className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded-sm outline-none cursor-pointer"
+            className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer"
         />
-        <p className="text-[13px] text-gray-800">{text}</p>
+        <p className={`text-[13px] ${done ? 'text-gray-500 line-through' : 'text-gray-800'}`}>
+            {text}
+        </p>
     </div>
 );
 

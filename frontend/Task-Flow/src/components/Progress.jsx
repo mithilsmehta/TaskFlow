@@ -4,22 +4,35 @@ const Progress = ({ progress, status }) => {
     const getColor = () => {
         switch (status) {
             case 'In Progress':
-                return 'text-cyan-500 bg-cyan-500 border border-cyan-500/10'
-
+                return 'bg-cyan-500';
             case 'Completed':
-                return 'text-indigo-500 bg-indigo-500 border border-indigo-500/10'
-
+                return 'bg-green-500';
             default:
-                return 'text-violet-500 bg-violet-500 border border-violet-500/10'
+                return 'bg-violet-500';
         }
-    }
+    };
+
+    // Ensure progress is a number between 0 and 100
+    const safeProgress = Math.min(100, Math.max(0, Number(progress) || 0));
 
     return (
-        <div className="w-full bg-gray-200 rounded-full h-1.5">
-            <div className={`${getColor()} h-1.5 rounded-full text-center text-xs font-medium`} style={{ width: `${progress}%` }}>
+        <div className="w-full">
+            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                <span>Progress</span>
+                <span>{safeProgress}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div 
+                    className={`h-full rounded-full ${getColor()} transition-all duration-300 ease-out`}
+                    style={{ width: `${safeProgress}%` }}
+                    role="progressbar"
+                    aria-valuenow={safeProgress}
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                />
             </div>
         </div>
-    )
+    );
 };
 
 export default Progress;
