@@ -20,6 +20,9 @@ import UserProvider, { UserContext } from "./context/UserContext";
 import { Toaster } from "react-hot-toast";
 import Loader from "./components/Loader";
 
+// ✅ Import the ChatPage you created
+import ChatPage from "./pages/ChatPage";
+
 const App = () => {
   return (
     <UserProvider>
@@ -44,6 +47,11 @@ const App = () => {
             <Route path="/user/dashboard" element={<UserDashboard />} />
             <Route path="/user/tasks" element={<MyTasks />} />
             <Route path="/user/task-details/:id" element={<ViewTaskDetails />} />
+          </Route>
+
+          {/* Chat Route (both admin & member can access) */}
+          <Route element={<PrivateRoute allowedRoles={["admin", "member"]} />}>
+            <Route path="/chat" element={<ChatPage />} />
           </Route>
 
           {/* Root Redirect */}
