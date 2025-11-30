@@ -1,14 +1,20 @@
 const express = require('express');
+const http = require('http');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const path = require('path');
 const cors = require('cors');
 const chatRoutes = require('./routes/chatRoutes');
+const { initializeSocket } = require('./config/socket');
 
 dotenv.config();
 connectDB();
 
 const app = express();
+const server = http.createServer(app);
+
+// Initialize Socket.IO
+initializeSocket(server);
 
 // --------------------
 // Enable CORS
@@ -35,6 +41,8 @@ app.use('/chat', chatRoutes);
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
+app.use('/api/reports', require('./routes/reportRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 // --------------------
 // Static
@@ -46,4 +54,7 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Socket.IO initialized and ready`);
+});

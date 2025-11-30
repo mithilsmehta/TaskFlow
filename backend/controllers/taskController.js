@@ -1,5 +1,6 @@
 const Task = require('../models/Task');
 const User = require('../models/User');
+const notificationService = require('../services/notificationService');
 
 // ============================
 // Get all tasks (scoped by company)
@@ -25,9 +26,9 @@ const getTasks = async (req, res) => {
     }
 
     // Format tasks with consistent fields
-    const formattedTasks = tasks.map(task => {
+    const formattedTasks = tasks.map((task) => {
       const todoChecklist = task.todoChecklist || [];
-      const completedTodos = todoChecklist.filter(todo => todo.done).length;
+      const completedTodos = todoChecklist.filter((todo) => todo.done).length;
       const totalTodos = todoChecklist.length;
       const progress = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
 
@@ -37,7 +38,7 @@ const getTasks = async (req, res) => {
         progress: task.progress || progress,
         completedTodoCount: completedTodos,
         todoChecklist: todoChecklist,
-        attachmentCount: task.attachments?.length || 0
+        attachmentCount: task.attachments?.length || 0,
       };
     });
 
@@ -58,9 +59,9 @@ const getTasks = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching tasks:', error);
-    res.status(500).json({ 
-      message: 'Failed to fetch tasks', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Failed to fetch tasks',
+      error: error.message,
     });
   }
 };
@@ -76,33 +77,33 @@ const getTaskById = async (req, res) => {
       .lean();
 
     if (!task) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'Task not found' 
+        message: 'Task not found',
       });
     }
 
     // Calculate progress and completed todos
     const todoChecklist = Array.isArray(task.todoChecklist) ? task.todoChecklist : [];
-    const completedTodos = todoChecklist.filter(todo => todo?.done).length;
+    const completedTodos = todoChecklist.filter((todo) => todo?.done).length;
     const totalTodos = todoChecklist.length;
     const progress = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
 
     // Format assignedTo to ensure consistent structure
-    const assignedTo = Array.isArray(task.assignedTo) 
-      ? task.assignedTo.map(user => ({
+    const assignedTo = Array.isArray(task.assignedTo)
+      ? task.assignedTo.map((user) => ({
           _id: user._id,
           name: user.name || '',
           email: user.email || '',
-          profileImageUrl: user.profileImageUrl || ''
+          profileImageUrl: user.profileImageUrl || '',
         }))
       : [];
 
     // Format todoChecklist to ensure consistent structure
-    const formattedTodoChecklist = todoChecklist.map(item => ({
+    const formattedTodoChecklist = todoChecklist.map((item) => ({
       _id: item._id || Math.random().toString(36).substr(2, 9),
       text: item.text || '',
-      done: !!item.done
+      done: !!item.done,
     }));
 
     // Prepare the response object with all required fields
@@ -123,7 +124,7 @@ const getTaskById = async (req, res) => {
       completedTodoCount: completedTodos,
       attachmentCount: Array.isArray(task.attachments) ? task.attachments.length : 0,
       createdAt: task.createdAt,
-      updatedAt: task.updatedAt
+      updatedAt: task.updatedAt,
     };
 
     // Remove unwanted fields
@@ -133,10 +134,10 @@ const getTaskById = async (req, res) => {
     res.json(response);
   } catch (error) {
     console.error('Error fetching task:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: 'Failed to fetch task', 
-      error: error.message 
+      message: 'Failed to fetch task',
+      error: error.message,
     });
   }
 };
@@ -146,7 +147,16 @@ const getTaskById = async (req, res) => {
 // ============================
 const createTask = async (req, res) => {
   try {
-    const { title, description, priority, startDate, dueDate, assignedTo = [], attachments, todoChecklist: taskTodoChecklist = [] } = req.body;
+    const {
+      title,
+      description,
+      priority,
+      startDate,
+      dueDate,
+      assignedTo = [],
+      attachments,
+      todoChecklist: taskTodoChecklist = [],
+    } = req.body;
 
     // Validate required fields
     if (!title) {
@@ -192,27 +202,43 @@ const createTask = async (req, res) => {
       .populate('companyId', 'name')
       .lean();
 
+    // Send notifications to assigned users
+    if (assignedTo.length > 0) {
+      try {
+        const assignedUsers = await User.find({ _id: { $in: assignedTo } }).select('_id name');
+        await notificationService.notifyTaskAssigned({
+          taskId: createdTask._id,
+          taskTitle: createdTask.title,
+          assignedUsers: assignedUsers,
+          assignedBy: { _id: req.user._id, name: req.user.name },
+          companyId: req.user.companyId,
+        });
+      } catch (notifError) {
+        console.error('Error sending task assignment notifications:', notifError);
+      }
+    }
+
     // Calculate progress and completed todos
     const todoChecklist = Array.isArray(createdTask.todoChecklist) ? createdTask.todoChecklist : [];
-    const completedTodoCount = todoChecklist.filter(todo => todo?.done).length;
+    const completedTodoCount = todoChecklist.filter((todo) => todo?.done).length;
     const totalTodos = todoChecklist.length;
     const progress = totalTodos > 0 ? Math.round((completedTodoCount / totalTodos) * 100) : 0;
 
     // Format assignedTo for consistent response
-    const formattedAssignedTo = Array.isArray(createdTask.assignedTo) 
-      ? createdTask.assignedTo.map(user => ({
+    const formattedAssignedTo = Array.isArray(createdTask.assignedTo)
+      ? createdTask.assignedTo.map((user) => ({
           _id: user._id || user,
           name: user.name || '',
           email: user.email || '',
-          profileImageUrl: user.profileImageUrl || ''
+          profileImageUrl: user.profileImageUrl || '',
         }))
       : [];
 
     // Format todoChecklist for consistent response
-    const formattedTodoChecklist = todoChecklist.map(item => ({
+    const formattedTodoChecklist = todoChecklist.map((item) => ({
       _id: item._id || Math.random().toString(36).substr(2, 9),
       text: item.text || '',
-      done: !!item.done
+      done: !!item.done,
     }));
 
     // Prepare the response object with all required fields
@@ -233,7 +259,7 @@ const createTask = async (req, res) => {
       completedTodoCount: completedTodoCount,
       attachmentCount: Array.isArray(createdTask.attachments) ? createdTask.attachments.length : 0,
       createdAt: createdTask.createdAt,
-      updatedAt: createdTask.updatedAt
+      updatedAt: createdTask.updatedAt,
     };
 
     res.status(201).json(response);
@@ -259,9 +285,9 @@ const updateTask = async (req, res) => {
       task.dueDate = req.body.dueDate ? new Date(req.body.dueDate) : task.dueDate;
       // normalize checklist to expected shape
       if (Array.isArray(req.body.todoChecklist)) {
-        task.todoChecklist = req.body.todoChecklist.map(it => ({
-          text: typeof it === 'string' ? it : (it?.text || ''),
-          done: !!(typeof it === 'object' && it?.done)
+        task.todoChecklist = req.body.todoChecklist.map((it) => ({
+          text: typeof it === 'string' ? it : it?.text || '',
+          done: !!(typeof it === 'object' && it?.done),
         }));
       }
       // attachments: force array of strings
@@ -290,34 +316,81 @@ const updateTask = async (req, res) => {
       }
     }
 
+    const oldStatus = task.status;
     await task.save();
-    
+
     // Get the updated task with populated fields
     const updatedTask = await Task.findById(task._id)
       .populate('assignedTo', 'name email profileImageUrl')
       .populate('companyId', 'name');
 
+    // Send notifications for task updates
+    if (req.user.role === 'admin' && updatedTask.assignedTo.length > 0) {
+      try {
+        let updateType = 'Task details updated';
+
+        if (req.body.status && req.body.status !== oldStatus) {
+          updateType = `Status changed to ${req.body.status}`;
+
+          // Special notification for task completion
+          if (req.body.status === 'Completed') {
+            await notificationService.notifyTaskCompleted({
+              taskId: updatedTask._id,
+              taskTitle: updatedTask.title,
+              completedBy: { _id: req.user._id, name: req.user.name },
+              assignedUsers: updatedTask.assignedTo,
+              companyId: req.user.companyId,
+            });
+          } else {
+            await notificationService.notifyTaskUpdated({
+              taskId: updatedTask._id,
+              taskTitle: updatedTask.title,
+              updatedBy: { _id: req.user._id, name: req.user.name },
+              assignedUsers: updatedTask.assignedTo,
+              companyId: req.user.companyId,
+              updateType,
+            });
+          }
+        } else if (req.body.priority || req.body.dueDate || req.body.title) {
+          if (req.body.priority) updateType = `Priority changed to ${req.body.priority}`;
+          if (req.body.dueDate) updateType = 'Due date updated';
+          if (req.body.title) updateType = 'Task title updated';
+
+          await notificationService.notifyTaskUpdated({
+            taskId: updatedTask._id,
+            taskTitle: updatedTask.title,
+            updatedBy: { _id: req.user._id, name: req.user.name },
+            assignedUsers: updatedTask.assignedTo,
+            companyId: req.user.companyId,
+            updateType,
+          });
+        }
+      } catch (notifError) {
+        console.error('Error sending task update notifications:', notifError);
+      }
+    }
+
     // Calculate progress and completed todos
     const todoChecklist = Array.isArray(updatedTask.todoChecklist) ? updatedTask.todoChecklist : [];
-    const completedTodoCount = todoChecklist.filter(todo => todo?.done).length;
+    const completedTodoCount = todoChecklist.filter((todo) => todo?.done).length;
     const totalTodos = todoChecklist.length;
     const progress = totalTodos > 0 ? Math.round((completedTodoCount / totalTodos) * 100) : 0;
 
     // Format assignedTo for consistent response
-    const assignedTo = Array.isArray(updatedTask.assignedTo) 
-      ? updatedTask.assignedTo.map(user => ({
+    const assignedTo = Array.isArray(updatedTask.assignedTo)
+      ? updatedTask.assignedTo.map((user) => ({
           _id: user._id || user,
           name: user.name || '',
           email: user.email || '',
-          profileImageUrl: user.profileImageUrl || ''
+          profileImageUrl: user.profileImageUrl || '',
         }))
       : [];
 
     // Format todoChecklist for consistent response
-    const formattedTodoChecklist = todoChecklist.map(item => ({
+    const formattedTodoChecklist = todoChecklist.map((item) => ({
       _id: item._id || Math.random().toString(36).substr(2, 9),
       text: item.text || '',
-      done: !!item.done
+      done: !!item.done,
     }));
 
     // Prepare the response object with all required fields
@@ -338,7 +411,7 @@ const updateTask = async (req, res) => {
       completedTodoCount: completedTodoCount,
       attachmentCount: Array.isArray(updatedTask.attachments) ? updatedTask.attachments.length : 0,
       createdAt: updatedTask.createdAt,
-      updatedAt: updatedTask.updatedAt
+      updatedAt: updatedTask.updatedAt,
     };
 
     res.json(response);
@@ -425,7 +498,7 @@ const updateTaskChecklist = async (req, res) => {
 
     // Update task progress
     task.progress = progress;
-    
+
     await task.save();
 
     // Get the updated task with populated fields
@@ -436,20 +509,20 @@ const updateTaskChecklist = async (req, res) => {
 
     // Format assignedTo for consistent response
     const formattedAssignedTo = Array.isArray(updatedTask.assignedTo)
-      ? updatedTask.assignedTo.map(user => ({
+      ? updatedTask.assignedTo.map((user) => ({
           _id: user._id || user,
           name: user.name || '',
           email: user.email || '',
-          profileImageUrl: user.profileImageUrl || ''
+          profileImageUrl: user.profileImageUrl || '',
         }))
       : [];
 
     // Format todoChecklist for consistent response
     const formattedTodoChecklist = Array.isArray(updatedTask.todoChecklist)
-      ? updatedTask.todoChecklist.map(item => ({
+      ? updatedTask.todoChecklist.map((item) => ({
           _id: item._id || Math.random().toString(36).substr(2, 9),
           text: item.text || '',
-          done: !!item.done
+          done: !!item.done,
         }))
       : [];
 
@@ -470,16 +543,16 @@ const updateTaskChecklist = async (req, res) => {
       completedTodoCount: completedTodos,
       attachmentCount: Array.isArray(updatedTask.attachments) ? updatedTask.attachments.length : 0,
       createdAt: updatedTask.createdAt,
-      updatedAt: updatedTask.updatedAt
+      updatedAt: updatedTask.updatedAt,
     };
 
     // Return wrapped for frontend expectations
     res.json({ task: formatted });
   } catch (error) {
     console.error('Error updating task checklist:', error);
-    res.status(500).json({ 
-      message: 'Failed to update checklist', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Failed to update checklist',
+      error: error.message,
     });
   }
 };

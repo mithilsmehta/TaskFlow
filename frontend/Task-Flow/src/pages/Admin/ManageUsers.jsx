@@ -25,18 +25,38 @@ const ManageUsers = () => {
         try {
             const response = await axiosInstance.get(API_PATHS.REPORTS.EXPORT_USERS, {
                 responseType: "blob",
+                headers: {
+                    'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                },
             });
 
+            // Check if we got a valid response
+            if (!response.data) {
+                throw new Error('No data received from server');
+            }
+
+            // Get filename from response headers or use default
+            const contentDisposition = response.headers['content-disposition'];
+            const filename = contentDisposition
+                ? contentDisposition.split('filename=')[1].replace(/"/g, '')
+                : `users_report_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+            // Create blob and download
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement("a");
             link.href = url;
-            link.setAttribute("download", "user_details.xlsx");
+            link.setAttribute("download", filename);
             document.body.appendChild(link);
             link.click();
-            link.parentNode.removeChild(link);
-            window.URL.revokeObjectURL(url);
+
+            // Cleanup
+            setTimeout(() => {
+                link.parentNode.removeChild(link);
+                window.URL.revokeObjectURL(url);
+            }, 100);
         } catch (error) {
-            console.error("Error downloading details:", error);
+            console.error("Error downloading report:", error);
+            alert("Failed to download report. Please try again.");
         }
     };
 

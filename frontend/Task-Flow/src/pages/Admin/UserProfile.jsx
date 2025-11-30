@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "../../components/layouts/DashboardLayout";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPaths";
+import { LuArrowLeft } from "react-icons/lu";
 
 const UserProfile = () => {
     const { id } = useParams();
@@ -32,34 +33,37 @@ const UserProfile = () => {
 
     return (
         <DashboardLayout>
-            <button
-                className="mb-4 text-blue-600 underline"
-                onClick={() => navigate(-1)}
-            >
-                ← Back
-            </button>
+            <div className="my-5">
+                <button
+                    type="button"
+                    onClick={() => navigate("/admin/users")}
+                    className="flex items-center text-gray-600 hover:text-primary transition-colors mb-6"
+                >
+                    <LuArrowLeft className="mr-2" /> Back to Team Members
+                </button>
 
-            <div className="card p-6">
-                <div className="flex items-center gap-4">
-                    <img
-                        src={user.profileImageUrl || "http://localhost:8000/uploads/default-profile.png"}
-                        alt={user.name}
-                        className="w-20 h-20 rounded-full object-cover border"
-                    />
-                    <div>
-                        <h2 className="text-xl font-semibold">{user.name}</h2>
-                        <p className="text-gray-600">{user.email}</p>
-                        <span className="px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded">
-                            {user.role}
-                        </span>
-                        <p className="text-sm mt-2 text-gray-500">Company: {user.companyName}</p>
+                <div className="card p-6">
+                    <div className="flex items-center gap-4">
+                        <img
+                            src={user.profileImageUrl || "http://localhost:8000/uploads/default-profile.png"}
+                            alt={user.name}
+                            className="w-20 h-20 rounded-full object-cover border"
+                        />
+                        <div>
+                            <h2 className="text-xl font-semibold">{user.name}</h2>
+                            <p className="text-gray-600">{user.email}</p>
+                            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded">
+                                {user.role}
+                            </span>
+                            <p className="text-sm mt-2 text-gray-500">Company: {user.companyName}</p>
+                        </div>
                     </div>
-                </div>
 
-                <div className="mt-6 grid grid-cols-3 gap-4">
-                    <StatCard label="Pending" value={user.pendingTasks || 0} />
-                    <StatCard label="In Progress" value={user.inProgressTasks || 0} />
-                    <StatCard label="Completed" value={user.completedTasks || 0} />
+                    <div className="mt-6 grid grid-cols-3 gap-4">
+                        <StatCard label="Pending" value={user.pendingTasks || 0} />
+                        <StatCard label="In Progress" value={user.inProgressTasks || 0} />
+                        <StatCard label="Completed" value={user.completedTasks || 0} />
+                    </div>
                 </div>
             </div>
         </DashboardLayout>

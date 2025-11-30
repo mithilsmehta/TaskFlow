@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from "react";
 import axiosInstance from "../utils/axiosInstance";
 import { API_PATHS } from "../utils/apiPaths";
+import socketService from "../services/socketService";
 
 export const UserContext = createContext();
 
@@ -34,6 +35,9 @@ const UserProvider = ({ children }) => {
                 if (userData.role) {
                     localStorage.setItem("role", userData.role);
                 }
+
+                // Initialize Socket.IO connection
+                socketService.connect(token);
             } catch (error) {
                 console.error("User not authenticated", error);
                 clearUser();
@@ -43,6 +47,11 @@ const UserProvider = ({ children }) => {
         };
 
         fetchUser();
+
+        // Cleanup socket connection on unmount
+        return () => {
+            socketService.disconnect();
+        };
     }, []);
 
     const updateUser = (data) => {
@@ -64,6 +73,9 @@ const UserProvider = ({ children }) => {
         setUser(null);
         localStorage.removeItem("token");
         localStorage.removeItem("role");
+
+        // Disconnect socket on logout
+        socketService.disconnect();
     };
 
     return (
